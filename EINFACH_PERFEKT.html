@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Inventar</title>
+    <!-- QuaggaJS für Barcode Scanner -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007AFF;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .add-form {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .filter-bar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .category-filter {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .category-btn {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .category-btn.active {
+            background: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
+        
+        .category-btn:hover {
+            border-color: #007AFF;
+        }
+        
+        .scanner-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .scanner-header {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        #scanner {
+            width: 90%;
+            max-width: 400px;
+            height: 300px;
+            border: 2px solid #007AFF;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .scanner-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn-scanner {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .btn-close {
+            background: #FF3B30;
+            color: white;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        input, select {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056CC;
+        }
+        
+        .items {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 15px;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-name {
+            font-weight: 600;
+        }
+        
+        .item-category {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .item-quantity {
+            font-weight: bold;
+            color: #007AFF;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 14px;
+            min-width: 30px;
+        }
+        
+        .btn-danger {
+            background: #FF3B30;
+        }
+        
+        .btn-success {
+            background: #34C759;
+        }
+        
+        .btn-warning {
+            background: #FF9500;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .item {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .item-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header mit Statistiken -->
+        <div class="header">
+            <h1>📦 Inventar Manager</h1>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number" id="totalItems">0</div>
+                    <div class="stat-label">Artikel</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="totalQuantity">0</div>
+                    <div class="stat-label">Gesamt</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="lowStock">0</div>
+                    <div class="stat-label">Niedrig</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Suche -->
+        <div class="filter-bar">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Artikel suchen..." style="width: 100%;" oninput="filterItems()">
+            </div>
+            <button onclick="startScanner()" style="background: #34C759;">📱 Scanner</button>
+        </div>
+        
+        <div class="filter-bar">
+            <div class="category-filter">
+                <div class="category-btn active" onclick="filterByCategory('all')">🔍 Alle</div>
+                <div class="category-btn" onclick="filterByCategory('Material')">📦 Material</div>
+                <div class="category-btn" onclick="filterByCategory('Werkzeug')">🔧 Werkzeug</div>
+                <div class="category-btn" onclick="filterByCategory('Elektronik')">📱 Elektronik</div>
+                <div class="category-btn" onclick="filterByCategory('Büro')">🏠 Büro</div>
+                <div class="category-btn" onclick="filterByCategory('Kabel')">🔌 Kabel</div>
+            </div>
+        </div>
+
+        <!-- Artikel hinzufügen -->
+        <div class="add-form">
+            <h2>➕ Artikel hinzufügen</h2>
+            <div class="form-row">
+                <input type="text" id="itemName" placeholder="Artikelname" required>
+                <select id="itemCategory">
+                    <option value="Material">📦 Material</option>
+                    <option value="Werkzeug">🔧 Werkzeug</option>
+                    <option value="Elektronik">📱 Elektronik</option>
+                    <option value="Büro">🏠 Büro</option>
+                    <option value="Kabel">🔌 Kabel</option>
+                </select>
+                <input type="number" id="itemQuantity" placeholder="Menge" value="1" min="1" required>
+            </div>
+            <div class="form-row">
+                <input type="text" id="itemBarcode" placeholder="Barcode (optional)">
+                <input type="number" id="itemMinStock" placeholder="Mindestbestand" value="5" min="0">
+                <button onclick="addItem()">Hinzufügen</button>
+            </div>
+        </div>
+
+        <!-- Artikel Liste -->
+        <div class="items">
+            <div id="itemsList">
+                <div class="empty" id="emptyState">
+                    <h3>Keine Artikel vorhanden</h3>
+                    <p>Fügen Sie Ihren ersten Artikel hinzu</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Scanner -->
+    <div class="scanner-container" id="scannerContainer">
+        <div class="scanner-header">
+            <h2>📱 Barcode Scanner</h2>
+            <p>Richten Sie die Kamera auf den Barcode</p>
+        </div>
+        <div id="scanner"></div>
+        <div class="scanner-controls">
+            <button class="btn-scanner btn-close" onclick="stopScanner()">Schließen</button>
+        </div>
+    </div>
+
+    <script>
+        // Daten
+        let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+        let currentFilter = '';
+        let currentCategory = 'all';
+
+        // Initialisierung
+        document.addEventListener('DOMContentLoaded', function() {
+            loadItems();
+            updateStats();
+        });
+
+        // Artikel hinzufügen
+        function addItem() {
+            const name = document.getElementById('itemName').value.trim();
+            const category = document.getElementById('itemCategory').value;
+            const quantity = parseInt(document.getElementById('itemQuantity').value);
+            const barcode = document.getElementById('itemBarcode').value.trim();
+            const minStock = parseInt(document.getElementById('itemMinStock').value) || 5;
+
+            if (!name) {
+                alert('Bitte Artikelname eingeben');
+                return;
+            }
+
+            if (!quantity || quantity < 1) {
+                alert('Bitte gültige Menge eingeben');
+                return;
+            }
+
+            const newItem = {
+                id: Date.now(),
+                name: name,
+                category: category,
+                quantity: quantity,
+                barcode: barcode || generateBarcode(),
+                minStock: minStock,
+                lastUpdated: Date.now()
+            };
+
+            inventory.push(newItem);
+            saveData();
+            loadItems();
+            updateStats();
+
+            // Formular zurücksetzen
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemQuantity').value = '1';
+            document.getElementById('itemBarcode').value = '';
+            document.getElementById('itemMinStock').value = '5';
+            document.getElementById('itemName').focus();
+        }
+
+        // Barcode generieren
+        function generateBarcode() {
+            return Date.now().toString();
+        }
+
+        // Artikel laden
+        function loadItems() {
+            const itemsList = document.getElementById('itemsList');
+            
+            // Filtern
+            const filteredItems = inventory.filter(item => {
+                const matchesSearch = !currentFilter || 
+                    item.name.toLowerCase().includes(currentFilter) ||
+                    item.barcode.includes(currentFilter);
+                const matchesCategory = currentCategory === 'all' || item.category === currentCategory;
+                return matchesSearch && matchesCategory;
+            });
+
+            if (filteredItems.length === 0) {
+                itemsList.innerHTML = '<div class="empty"><h3>Keine Artikel gefunden</h3><p>Versuchen Sie einen anderen Filter</p></div>';
+                return;
+            }
+
+            let html = '';
+            filteredItems.forEach(item => {
+                const originalIndex = inventory.indexOf(item);
+                const categoryIcon = getCategoryIcon(item.category);
+                html += `
+                    <div class="item">
+                        <div>
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-category">${categoryIcon} ${item.category}</div>
+                            ${item.barcode ? `<div style="font-size: 12px; color: #999;">📱 ${item.barcode}</div>` : ''}
+                        </div>
+                        <div class="item-quantity">${item.quantity} Stück</div>
+                        <div style="color: ${item.quantity <= item.minStock ? '#FF3B30' : '#34C759'}; font-weight: bold;">
+                            ${item.quantity <= item.minStock ? '⚠️ Niedrig' : '✅ OK'}
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn-small btn-success" onclick="changeQuantity(${originalIndex}, 1)">+</button>
+                            <button class="btn-small btn-warning" onclick="changeQuantity(${originalIndex}, -1)">-</button>
+                            <button class="btn-small btn-danger" onclick="deleteItem(${originalIndex})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            itemsList.innerHTML = html;
+        }
+
+        // Kategorie Icon
+        function getCategoryIcon(category) {
+            const icons = {
+                'Material': '📦',
+                'Werkzeug': '🔧',
+                'Elektronik': '📱',
+                'Büro': '🏠',
+                'Kabel': '🔌'
+            };
+            return icons[category] || '📦';
+        }
+
+        // Filter Funktionen
+        function filterItems() {
+            currentFilter = document.getElementById('searchInput').value.toLowerCase();
+            loadItems();
+        }
+
+        function filterByCategory(category) {
+            currentCategory = category;
+            
+            // Button-Status aktualisieren
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadItems();
+        }
+
+        // Menge ändern
+        function changeQuantity(index, change) {
+            inventory[index].quantity = Math.max(0, inventory[index].quantity + change);
+            saveData();
+            loadItems();
+            updateStats();
+        }
+
+        // Artikel löschen
+        function deleteItem(index) {
+            if (confirm(`"${inventory[index].name}" wirklich löschen?`)) {
+                inventory.splice(index, 1);
+                saveData();
+                loadItems();
+                updateStats();
+            }
+        }
+
+        // Statistiken aktualisieren
+        function updateStats() {
+            const totalItems = inventory.length;
+            const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
+            const lowStock = inventory.filter(item => item.quantity <= item.minStock).length;
+
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('totalQuantity').textContent = totalQuantity;
+            document.getElementById('lowStock').textContent = lowStock;
+        }
+
+        // Daten speichern
+        function saveData() {
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+        }
+
+        // Barcode Scanner
+        function startScanner() {
+            const scannerContainer = document.getElementById('scannerContainer');
+            scannerContainer.style.display = 'flex';
+            
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#scanner'),
+                    constraints: {
+                        width: 400,
+                        height: 300,
+                        facingMode: "environment"
+                    }
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.log(err);
+                    alert('Kamera konnte nicht gestartet werden');
+                    stopScanner();
+                    return;
+                }
+                Quagga.start();
+            });
+
+            Quagga.onDetected(function(data) {
+                const barcode = data.codeResult.code;
+                document.getElementById('itemBarcode').value = barcode;
+                stopScanner();
+                alert(`Barcode erkannt: ${barcode}`);
+            });
+        }
+
+        function stopScanner() {
+            Quagga.stop();
+            document.getElementById('scannerContainer').style.display = 'none';
+        }
+
+        // Enter-Taste im Name-Feld
+        document.getElementById('itemName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addItem();
+            }
+        });
+
+        // Enter-Taste im Such-Feld
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                filterItems();
+            }
+        });
+    </script>
+</body>
+</html>
